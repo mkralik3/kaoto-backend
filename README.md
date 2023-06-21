@@ -66,7 +66,7 @@ The API static swagger documentation is on  https://kaotoio.github.io/kaoto-back
 You have to install in your machine
 
 * Maven >= 3.6
-* JDK >= 17
+* JDK >= 20
 
 ### Building 
 
