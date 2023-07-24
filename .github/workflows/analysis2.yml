@@ -1,0 +1,93 @@
+name: 🧐 Analyze code
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    types: [ opened, synchronize, reopened ]
+jobs:
+  build:
+    name: 👩🏼‍🏭 Build 👩🏼‍🏭
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: 🥸 Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: 17
+          check-latest: true
+      - name: 🔥 Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      - name: 🤳 Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: java
+      - name: 🦾 Build and Analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+        run: mvn -T1C -B verify -Panalysis
+      - name: 👀 Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+      - name: 💅 Codecov Analysis
+        uses: codecov/codecov-action@v3
+
+  native-tests:
+    name: 👩🏼‍🏭 Native tests for ${{ matrix.os }} 👩🏼‍🏭
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+#          - os: ubuntu-latest
+#          - os: macos-latest
+          - os: windows-latest
+    steps:
+      - name: 🗄️ Checkout Source Code
+        uses: actions/checkout@v3
+      - name: 🥸 Set up GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '17.0.7'
+          distribution: 'graalvm-community'
+          components: 'native-image'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: 'maven'
+      - name: 🔥 Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      - name: configure Pagefile
+        uses: al-cheb/configure-pagefile-action@v1.3
+        with:
+          minimum-size: 16GB
+          disk-root: "C:"
+        if: ${{ matrix.os == 'windows-latest' }}
+      - name: 🤳 Run native tests
+        run: mvn install -Pnative
+        env:
+          QUARKUS_NATIVE_NATIVE_IMAGE_XMX: "5g"
+          QUARKUS_LOG_CATEGORY__IO_KAOTO_BACKEND_MODEL_DEPLOYEMENT_KAMELET_STEP_FLOWSTEPDESERIALIZER__LEVEL: OFF
+      - name: Archive Quarkus log for native tests
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: quarkus-logs-${{ matrix.os }}
+          path: '**/target/quarkus.log'
+      - name: Archive native binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: kaoto-runner-${{ matrix.os }}
+          path: |
+            api/target/*-runner
+            api\target\*-runner.exe
