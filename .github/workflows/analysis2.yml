@@ -77,7 +77,8 @@ jobs:
         run: mvn install -Pnative
         env:
           QUARKUS_NATIVE_NATIVE_IMAGE_XMX: "5g"
-          QUARKUS_LOG_CATEGORY__IO_KAOTO_BACKEND_MODEL_DEPLOYEMENT_KAMELET_STEP_FLOWSTEPDESERIALIZER__LEVEL: OFF
+          QUARKUS_LOG_LEVEL: "OFF"
+#          QUARKUS_LOG_CATEGORY__IO_KAOTO_BACKEND_MODEL_DEPLOYEMENT_KAMELET_STEP_FLOWSTEPDESERIALIZER__LEVEL: OFF
       - name: Archive Quarkus log for native tests
         uses: actions/upload-artifact@v3
         if: failure()
